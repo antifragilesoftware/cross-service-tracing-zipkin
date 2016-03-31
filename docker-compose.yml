@@ -5,6 +5,43 @@ networks:
  
 services:
 
+  consul1:
+    image: gliderlabs/consul
+    container_name: consul1
+    ports:
+     - "8400:8400"
+     - "8500:8500"
+     - "8600:8600/udp"
+    networks:
+      - micronet
+    command: ["agent", "-server", "-bootstrap-expect=1", "-data-dir=/tmp/consul", "-node=consul1", "-client=0.0.0.0", "-ui"]
+
+  microservice1:
+    image: antifragilesoftware/simple-boot-traceable-zipkin-microservice
+    container_name: microservice1
+    ports:
+     - "8080:8080"
+    depends_on:
+     - consul1
+     - query
+     - web
+    networks:
+      - micronet
+    command: ["java","--spring.cloud.consul.host=consul1","-Djava.security.egd=file:/dev/./urandom","-jar","/microservice.jar"]
+
+  microserviceconsumer:
+    image: antifragilesoftware/simple-boot-traceable-zipkin-microservice-consumer
+    container_name: microserviceconsumer
+    ports:
+     - "8090:8080"
+    depends_on:
+     - consul1
+     - query
+     - web
+    networks:
+      - micronet
+    command: ["java","--spring.cloud.consul.host=consul1","-Djava.security.egd=file:/dev/./urandom","-jar","/microservice.jar"]
+
   storage:
     image: openzipkin/zipkin-cassandra:1.39.0
     container_name: cassandra
